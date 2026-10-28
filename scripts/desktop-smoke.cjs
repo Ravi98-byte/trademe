@@ -78,6 +78,49 @@ const assert = require('node:assert/strict');
       .getByRole('heading', { name: 'permitted-notes', exact: true })
       .first()
       .waitFor();
+    await win.getByRole('button', { name: /^Research chat/ }).click();
+    await win
+      .getByRole('button', { name: 'Create manual test question' })
+      .click();
+    await win
+      .getByLabel('Question *', { exact: true })
+      .fill('Which source verifies the rule?');
+    await win
+      .getByLabel('Why is this information needed? *')
+      .fill('A source is missing.');
+    await win
+      .getByRole('button', { name: 'Save test question', exact: true })
+      .click();
+    await win
+      .getByRole('heading', {
+        name: 'Which source verifies the rule?',
+        exact: true,
+      })
+      .waitFor();
+    await win
+      .getByRole('button', { name: 'Copy question for ChatGPT' })
+      .click();
+    await win
+      .getByRole('status')
+      .filter({ hasText: 'Question copied' })
+      .waitFor();
+    assert.ok(
+      (await app.evaluate(({ clipboard }) => clipboard.readText())).includes(
+        'A source is missing.',
+      ),
+    );
+    await win
+      .getByLabel('Your reply *', { exact: true })
+      .fill('This still needs verification.');
+    await win
+      .getByLabel('Source / reference (optional)')
+      .fill('ChatGPT research, unverified');
+    await win.getByRole('button', { name: 'Save reply', exact: true }).click();
+    await win.getByRole('status').filter({ hasText: 'Reply saved' }).waitFor();
+    await win
+      .getByText('User-provided · Not independently verified', { exact: true })
+      .waitFor();
+    await win.getByRole('button', { name: /^Knowledge library/ }).click();
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, backup);
@@ -90,6 +133,10 @@ const assert = require('node:assert/strict');
       .waitFor();
     const exported = JSON.parse(await readFile(backup, 'utf8'));
     assert.equal(exported.entries.length, 2);
+    assert.equal(
+      exported.questions[0].replies[0].source,
+      'ChatGPT research, unverified',
+    );
     assert.equal(exported.entries[1].locator, '00:12:30');
     await win.evaluate(() => window.scrollTo(0, 0));
     await win.screenshot({ path: join(dir, 'workspace.png') });
@@ -121,9 +168,24 @@ const assert = require('node:assert/strict');
         .entries.length,
       1,
     );
+    await win.getByRole('button', { name: /^Research chat/ }).click();
+    await win
+      .getByText('This still needs verification.', { exact: true })
+      .waitFor();
+    await win
+      .getByRole('heading', {
+        name: 'Which source verifies the rule?',
+        exact: true,
+      })
+      .waitFor();
+    await win.evaluate(() => window.scrollTo(0, 0));
+    await win.screenshot({
+      path: join(dir, 'research-chat.png'),
+      fullPage: true,
+    });
     assert.deepEqual(errors, []);
     console.log(
-      'PASS: actual Electron create, search, edit, text import, export, restart persistence, delete; no renderer errors.',
+      'PASS: actual Electron create, search, edit, text import, export, restart persistence, delete, research question/reply, clipboard and chat backup; no renderer errors.',
     );
     console.log('Isolated test artifacts:', dir);
   } finally {

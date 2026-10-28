@@ -52,3 +52,12 @@ The Windows application bundle built on Linux. NSIS installer generation failed 
 A ZIP cross-build uses `npm run dist -- --win zip --x64 --publish never -c.win.signAndEditExecutable=false`. This development-only override skips executable branding/resource edits and signing to avoid Wine for the app bundle. The default Electron icon is retained. Keep this distinct from the normal Windows-native `npm run dist:win` installer command.
 
 Windows x64 ZIP packaging completed successfully. ZIP CRC verification passed and confirmed `TradeMe.exe` and `resources/app.asar` are present. A SHA-256 file is stored alongside the ZIP. This checks archive integrity, not Windows runtime behavior.
+
+## Version 0.2.0 research chat
+
+- 16 storage tests passed, none skipped: includes compatibility with existing note libraries, concurrent replies, validation, corruption protection, conversation backup/export, and deletion backups.
+- Production build and strict TypeScript checks passed.
+- Actual Electron smoke test passed on the Linux virtual display: manual question creation, question copying (clipboard checked), reply with source, unverified label, backup inclusion, and persistence after restart, alongside the existing note workflow.
+- No renderer errors were observed during the tested workflow.
+- The user supplied Windows screenshots and confirmed note persistence after restart for version 0.1.0. Version 0.2.0 still needs Windows validation. Installer execution has not been independently verified.
+- Automatic AI questions, external AI calls, PDF import, and any action resumption are not implemented or tested.

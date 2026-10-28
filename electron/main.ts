@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, clipboard } from 'electron';
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, basename, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,6 +31,31 @@ else {
         }
       });
     }
+    handle('questions:list', () => store.listQuestions());
+    handle('questions:create', (input) => store.createQuestion(input));
+    handle('questions:reply', (id, content, source) =>
+      store.replyToQuestion(id, content, source),
+    );
+    handle('questions:copy', async (id) => {
+      const q = (await store.listQuestions()).find((q) => q.id === id);
+      if (!q) throw new Error('Question not found.');
+      clipboard.writeText(
+        `Research question: ${q.question}\n\nWhy this information is needed: ${q.reason}\n\nPlease include sources, dates, and uncertainties. This is a research question, not permission to trade.`,
+      );
+    });
+    handle('questions:delete', async (id) => {
+      const result = await dialog.showMessageBox(window, {
+        type: 'question',
+        buttons: ['Cancel', 'Delete question'],
+        defaultId: 0,
+        cancelId: 0,
+        message: 'Delete this question and its replies?',
+        detail:
+          'Previous versions may remain in automatic backups and exported files.',
+      });
+      if (result.response !== 1) throw new Error('Deletion cancelled.');
+      await store.deleteQuestion(id);
+    });
     handle('library:list', () => store.list());
     handle('library:save', (input, id) => {
       if (id !== undefined && typeof id !== 'string')

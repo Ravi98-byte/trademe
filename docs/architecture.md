@@ -46,4 +46,10 @@ Cloud checks and Windows acceptance are recorded separately. This milestone is n
 
 ## Open decisions
 
-Confirmed: Windows 10, Intel Core i5 7th generation (x64 target); notes, text files, PDFs, video/interview links. Windows installer validation remains pending on the target laptop. Hardware details inform later local AI/PDF scale choices. Exact firm account, platform, budget, live/delayed data, and AI privacy preferences are needed only before the corresponding integration, not to build this foundation. No recurring fees or external data transfers are introduced here.
+Confirmed: Windows 10, Intel Core i5 7th generation (x64 target); notes, text files, PDFs, video/interview links. Windows installer validation remains pending on the target laptop. Hardware details inform later local AI/PDF scale choices. Confirmed platforms: MFFU, TradingView, and Tradovate. The exact MFFU account variant and authoritative rules remain to be verified. Budget, live/delayed data, and AI privacy preferences are needed before their corresponding integrations. No recurring fees or external data transfers are introduced here.
+
+## Research chat clarification
+
+The user wants the future agent to ask for help inside the application when information is missing. The user can research in ChatGPT and paste an answer into the matching thread. Version 0.2.0 implements the local manual handoff: narrow IPC methods, validated immutable replies, source references, timestamps, pending-reply counts, clipboard copying by explicit click, and backups shared with the library. It does not invent AI questions or execute anything. `origin: manual` makes that boundary explicit. Answered means a reply was recorded, not that the claim was verified or an action approved. An eventual agent must evaluate freshness and evidence and separately enforce permissions/risk checks; no consumer of chat replies is implemented now.
+
+The accepted next milestone remains document import and source-based search. The chat was added first at the user's request; PDF extraction and recovery UI have not been delivered yet.

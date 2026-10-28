@@ -15,6 +15,7 @@ import {
   type Entry,
   type EntryInput,
   type Library,
+  type ResearchQuestion,
 } from '../src/shared.js';
 
 export function validateInput(value: unknown): EntryInput {
@@ -84,6 +85,7 @@ export class LibraryStore {
     try {
       data = JSON.parse(raw);
       if (data.version !== 1 || !Array.isArray(data.entries)) throw new Error();
+      validateQuestions(data.questions);
       const ids = new Set<string>();
       for (const entry of data.entries) {
         validateInput(entry);
@@ -163,6 +165,59 @@ export class LibraryStore {
       await this.write(data);
     });
   }
+  listQuestions(): Promise<ResearchQuestion[]> {
+    return this.serial(async () => (await this.read()).questions ?? []);
+  }
+  createQuestion(raw: unknown): Promise<ResearchQuestion> {
+    return this.serial(async () => {
+      if (!raw || typeof raw !== 'object') throw new Error('Invalid question.');
+      const input = raw as Record<string, unknown>;
+      const question = text(input.question, 'Question', 10000);
+      const reason = text(input.reason, 'Reason', 10000);
+      const data = await this.read();
+      const thread: ResearchQuestion = {
+        id: randomUUID(),
+        question,
+        reason,
+        origin: 'manual',
+        createdAt: new Date().toISOString(),
+        replies: [],
+      };
+      data.questions = [thread, ...(data.questions ?? [])];
+      await this.write(data);
+      return thread;
+    });
+  }
+  replyToQuestion(
+    id: unknown,
+    content: unknown,
+    source: unknown,
+  ): Promise<ResearchQuestion> {
+    return this.serial(async () => {
+      const answer = text(content, 'Reply', 50000);
+      const reference = text(source, 'Source', 2000, true);
+      const data = await this.read();
+      const thread = data.questions?.find((q) => q.id === id);
+      if (!thread) throw new Error('Question not found.');
+      thread.replies.push({
+        id: randomUUID(),
+        content: answer,
+        source: reference,
+        createdAt: new Date().toISOString(),
+      });
+      await this.write(data);
+      return thread;
+    });
+  }
+  deleteQuestion(id: unknown): Promise<void> {
+    return this.serial(async () => {
+      const data = await this.read();
+      if (!data.questions?.some((q) => q.id === id))
+        throw new Error('Question not found.');
+      data.questions = data.questions.filter((q) => q.id !== id);
+      await this.write(data);
+    });
+  }
   export(destination: string): Promise<void> {
     return this.serial(async () => {
       const data = await this.read();
@@ -170,5 +225,51 @@ export class LibraryStore {
         mode: 0o600,
       });
     });
+  }
+}
+
+function text(
+  value: unknown,
+  name: string,
+  limit: number,
+  optional = false,
+): string {
+  if (
+    typeof value !== 'string' ||
+    value.length > limit ||
+    (!optional && !value.trim())
+  )
+    throw new Error(
+      `${name} must contain ${optional ? 'at most' : '1 to'} ${limit} characters.`,
+    );
+  return value.trim();
+}
+function validateQuestions(value: unknown): void {
+  if (value === undefined) return; // Existing v1 libraries need no destructive migration.
+  if (!Array.isArray(value)) throw new Error('Invalid questions.');
+  const ids = new Set<string>();
+  const identify = (item: Record<string, unknown>) => {
+    const id = text(item.id, 'ID', 100);
+    if (
+      ids.has(id) ||
+      typeof item.createdAt !== 'string' ||
+      !Number.isFinite(Date.parse(item.createdAt))
+    )
+      throw new Error('Invalid question metadata.');
+    ids.add(id);
+  };
+  for (const q of value) {
+    if (!q || typeof q !== 'object') throw new Error('Invalid question.');
+    identify(q);
+    text(q.question, 'Question', 10000);
+    text(q.reason, 'Reason', 10000);
+    if (q.origin !== 'manual' || !Array.isArray(q.replies))
+      throw new Error('Unsupported question origin or replies.');
+    for (const r of q.replies) {
+      if (!r || typeof r !== 'object') throw new Error('Invalid reply.');
+      identify(r);
+      text(r.content, 'Reply', 50000);
+      text(r.source, 'Source', 2000, true);
+    }
   }
 }

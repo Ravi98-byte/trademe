@@ -26,9 +26,22 @@ export type Entry = {
   updatedAt: string;
 };
 export type EntryInput = Omit<Entry, 'id' | 'createdAt' | 'updatedAt'>;
-export type Library = { version: 1; entries: Entry[] };
+export type Library = {
+  version: 1;
+  entries: Entry[];
+  questions?: ResearchQuestion[];
+};
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface DesktopAPI {
+  listQuestions(): Promise<Result<ResearchQuestion[]>>;
+  createQuestion(input: QuestionInput): Promise<Result<ResearchQuestion>>;
+  replyToQuestion(
+    id: string,
+    content: string,
+    source: string,
+  ): Promise<Result<ResearchQuestion>>;
+  copyQuestion(id: string): Promise<Result<void>>;
+  deleteQuestion(id: string): Promise<Result<void>>;
   list(): Promise<Result<Entry[]>>;
   save(input: EntryInput, id?: string): Promise<Result<Entry>>;
   remove(id: string): Promise<Result<void>>;
@@ -36,3 +49,17 @@ export interface DesktopAPI {
   backup(): Promise<Result<string | null>>;
   storageInfo(): Promise<Result<string>>;
 }
+
+export type QuestionInput = { question: string; reason: string };
+export type QuestionReply = {
+  id: string;
+  content: string;
+  source: string;
+  createdAt: string;
+};
+export type ResearchQuestion = QuestionInput & {
+  id: string;
+  origin: 'manual';
+  createdAt: string;
+  replies: QuestionReply[];
+};

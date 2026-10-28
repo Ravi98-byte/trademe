@@ -12,6 +12,7 @@ import {
   FlaskConical,
   FolderOpen,
   Layers3,
+  MessageSquare,
   LockKeyhole,
   Plus,
   Search,
@@ -29,6 +30,7 @@ import {
   type Result,
 } from './shared';
 import './styles.css';
+import { ResearchChat } from './ResearchChat';
 declare global {
   interface Window {
     trademe?: DesktopAPI;
@@ -70,6 +72,7 @@ const modules = [
 ];
 function App() {
   const [page, setPage] = useState('Knowledge library');
+  const [waiting, setWaiting] = useState(0);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All notes');
@@ -123,6 +126,13 @@ function App() {
     if (!result.ok) throw new Error(result.error);
     return result.value;
   }
+  async function refreshQuestions() {
+    if (api)
+      setWaiting(
+        (await unwrap(api.listQuestions())).filter((q) => !q.replies.length)
+          .length,
+      );
+  }
   async function refresh() {
     if (!api) return;
     setEntries(await unwrap(api.list()));
@@ -132,7 +142,11 @@ function App() {
       setLoading(false);
       return;
     }
-    Promise.all([refresh(), unwrap(api.storageInfo()).then(setStorage)])
+    Promise.all([
+      refresh(),
+      refreshQuestions(),
+      unwrap(api.storageInfo()).then(setStorage),
+    ])
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -196,6 +210,19 @@ function App() {
             <BookOpen size={18} />
             Knowledge library<span className="nav-count">{entries.length}</span>
           </button>
+          <button
+            className={page === 'Research chat' ? 'nav active' : 'nav'}
+            onClick={() => setPage('Research chat')}
+          >
+            <MessageSquare size={18} />
+            Research chat
+            <span
+              className="nav-count"
+              aria-label={`${waiting} awaiting replies`}
+            >
+              {waiting}
+            </span>
+          </button>
           <div className="nav-separator" />
           {modules.map((m) => (
             <button
@@ -234,7 +261,7 @@ function App() {
             <div>
               Ravi’s workspace<small>Local · Private by default</small>
             </div>
-            <span className="version">v0.1</span>
+            <span className="version">v0.2</span>
           </div>
         </div>
       </aside>
@@ -282,7 +309,9 @@ function App() {
                   ? 'A considered place for your trading knowledge. Every idea has a source.'
                   : page === 'Overview'
                     ? 'A clear foundation for better research decisions.'
-                    : 'Your workspace, built one deliberate step at a time.'}
+                    : page === 'Research chat'
+                      ? 'Questions for you. Research and reply in the same conversation.'
+                      : 'Your workspace, built one deliberate step at a time.'}
               </p>
             </div>
             {page === 'Knowledge library' && (
@@ -584,6 +613,14 @@ function App() {
               </footer>
             </>
           )}
+          {page === 'Research chat' && (
+            <ResearchChat
+              api={api}
+              onChanged={() => {
+                void refreshQuestions().catch((e) => setError(e.message));
+              }}
+            />
+          )}
           {page === 'Overview' && (
             <section className="roadmap">
               <h2>Your research workspace is taking shape.</h2>
@@ -687,7 +724,7 @@ function App() {
             <span className="divider" /> No live market data
           </span>
           <span>
-            FOUNDATION RELEASE <span className="version">0.1.0</span>
+            FOUNDATION RELEASE <span className="version">0.2.0</span>
           </span>
         </div>
       </div>

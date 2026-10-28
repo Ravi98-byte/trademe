@@ -1029,3 +1029,163 @@ select {
     display: none;
   }
 }
+
+.chat-explainer {
+  display: flex;
+  gap: 16px;
+  background: #172131;
+  border: 1px solid #34415b;
+  border-radius: 8px;
+  padding: 22px;
+  margin-bottom: 23px;
+  color: #bbcae6;
+}
+.chat-explainer svg {
+  flex-shrink: 0;
+  color: #a6b8f2;
+}
+.chat-explainer strong {
+  font-size: 14px;
+  font-weight: 550;
+}
+.chat-explainer p {
+  font-size: 12px;
+  color: #98abc8;
+  margin: 8px 0 0;
+  max-width: 800px;
+}
+.chat-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.question-list,
+.conversation {
+  background: #111823;
+  border: 1px solid #2b3548;
+  border-radius: 9px;
+  overflow: hidden;
+}
+.question-list > .button {
+  margin: 18px;
+  width: calc(100% - 36px);
+  font-size: 10px;
+}
+.question-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  width: 100%;
+  text-align: left;
+  border-top: 1px solid #293346;
+}
+.question-item:hover,
+.question-item.chosen {
+  background: #202c43;
+}
+.question-item strong {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.question-item small {
+  font-size: 9px;
+  color: #8296b5;
+}
+.question-status {
+  font-size: 9px;
+  color: #d7bc84;
+}
+.question-status.answered {
+  color: #91c8b1;
+}
+.chat-muted {
+  font-size: 11px;
+  color: #8c9eb8;
+  line-height: 1.9;
+}
+.question-list > .chat-muted {
+  padding: 0 20px 18px;
+}
+.transcript {
+  padding: 24px;
+}
+.chat-message {
+  padding: 21px;
+  border: 1px solid #34435e;
+  border-radius: 9px;
+  background: #1b263a;
+  margin-bottom: 18px;
+  overflow-wrap: anywhere;
+}
+.chat-message.reply {
+  margin-left: 28px;
+  background: #152821;
+  border-color: #304e43;
+}
+.message-label {
+  font-size: 9px;
+  color: #91a6c9;
+  letter-spacing: 0.8px;
+}
+.chat-message h2 {
+  font-size: 18px;
+  line-height: 1.6;
+  font-weight: 550;
+  white-space: pre-wrap;
+}
+.chat-message h3 {
+  font-size: 11px;
+  font-weight: 550;
+  color: #a1b3d2;
+}
+.chat-message p {
+  white-space: pre-wrap;
+  font-size: 12px;
+  color: #bfccdf;
+}
+.reply-source {
+  font-size: 10px;
+  color: #a0b4a9;
+  white-space: pre-wrap;
+}
+.unverified {
+  display: block;
+  color: #d6c18e;
+  margin-top: 14px;
+  font-size: 10px;
+}
+.chat-compose {
+  padding: 24px;
+  border-top: 1px solid #2a3549;
+}
+.chat-composer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.chat-composer-actions > span {
+  color: #7f94b3;
+  font-size: 10px;
+}
+.conversation > .delete-button {
+  margin: 0 auto 24px;
+}
+@media (max-width: 1100px) {
+  .chat-layout {
+    grid-template-columns: 230px minmax(0, 1fr);
+  }
+  .chat-compose,
+  .transcript {
+    padding: 18px;
+  }
+}
+@media (max-width: 900px) {
+  .chat-layout {
+    grid-template-columns: 1fr;
+  }
+}

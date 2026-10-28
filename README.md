@@ -14,6 +14,14 @@ A local-first desktop research workspace for Ravi's Nasdaq futures trading proje
 
 PDF extraction, semantic search, AI answers, market feeds, backtesting, platform observation, risk enforcement, and trading are **future work**. A source reference is a metadata citation, not proof that a claim is correct. A user-recorded test result has not been independently verified.
 
+## Research chat — version 0.2.0
+
+Open **Research chat** to keep a question and its researched replies in the same thread. Until an AI engine is connected, use **Create manual test question**, enter the missing information and why it is needed, then choose **Copy question for ChatGPT**. Paste it into ChatGPT yourself, research the answer, and return to **Your reply** in TradeMe. Add a source/reference when possible and click **Save reply**. Replies are labelled user-provided and unverified. They do not grant trading authority or trigger actions. There is no automatic AI generation, browser research, ChatGPT connection, or follow-up in this release.
+
+Questions, replies, sources, and timestamps persist locally in the existing library file and are included in automatic/exported backups. Version 1 libraries without questions continue to load unchanged; no destructive migration is performed. A badge counts threads awaiting their first reply. Saved threads can be deleted with confirmation, but copies may remain in prior backups. Unsent drafts are not saved; switching threads warns before discarding a draft. Moving to another page or closing the app can discard unsaved drafts. No secrets or account credentials should be entered here.
+
+This is the first part of the next milestone. PDF import, page-level document search, and in-app backup restoration remain pending.
+
 ## Run on Windows
 
 Target laptop: Windows 10, Intel Core i5 7th generation (64-bit/x64). RAM and free storage are not yet confirmed.
@@ -42,7 +50,7 @@ The installer appears in `release/`. The installer bundles the Electron runtime;
 
 ## Windows development ZIP
 
-The Linux cross-build can produce `release/TradeMe-0.1.0-win.zip` without the Wine-dependent NSIS installer step:
+The Linux cross-build can produce `release/TradeMe-0.2.0-win.zip` without the Wine-dependent NSIS installer step:
 
 ```sh
 npm run dist -- --win zip --x64 --publish never -c.win.signAndEditExecutable=false
