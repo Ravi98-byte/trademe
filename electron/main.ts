@@ -15,6 +15,7 @@ import updater from 'electron-updater';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { prepareFile, type PreparedFile } from './source-files.js';
+import { previewPdf } from './pdf-preview.js';
 import { UpdateController } from './updates.js';
 const here = dirname(fileURLToPath(import.meta.url));
 let window: BrowserWindow;
@@ -164,6 +165,9 @@ else {
     });
     handle('sources:save-link', (kind, input) =>
       store.saveSourceLink(kind, input),
+    );
+    handle('sources:preview-pdf', (id, page) =>
+      previewPdf(store, window, id, page),
     );
     handle('sources:open', async (id) => {
       const source = (await store.listSources()).find((s) => s.id === id);

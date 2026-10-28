@@ -81,3 +81,11 @@ Unpacked Linux packaging completed with the configured public GitHub provider. T
 - Actual video playback/codec support, transcription, OCR, semantic retrieval, and AI analysis are not implemented or tested. A video fixture proves file storage only. Native file-dialog choices are stubbed in automated tests; actual IPC, parsing, original-file copying, ZIP writing, and persistence are exercised.
 
 The now-public releases page subsequently returned HTTP 200 from this environment. That establishes page access at the time of the check, not successful installation or availability of the pending 0.4.0 release.
+
+## Version 0.4.1 original PDF viewer
+
+All 34 storage/import/updater tests passed. Production build and Linux packaging passed. The packaged real Electron workflow opens a generated two-page PDF containing blue vector bars in the new preview window at `#page=2`, checks sandbox/context settings, and asserts more than 10,000 blue chart pixels in the main page area of its screenshot. This demonstrates graphic rendering rather than text extraction alone. Existing note, source, chat, backup, and restart checks also passed.
+
+An initial test looked for a PDF embed element in the page DOM, which Chromium's native PDF viewer does not expose. Screenshot inspection showed the chart rendered correctly; the test was corrected to inspect rendered pixels. The temporary display also had to be restarted before desktop testing. No application sandbox was disabled.
+
+Original PDFs are hash-checked and preserved; no re-import or data migration is required. AI interpretation of charts remains unimplemented. Windows release checks run the same viewer test in development and packaged form; their outcome is separate from these Linux results and from manual installer-upgrade validation.

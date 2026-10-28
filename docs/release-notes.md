@@ -1,12 +1,11 @@
-# TradeMe 0.4.0
+# TradeMe 0.4.1
 
-- Adds **Knowledge library → Documents & media**, with visible **Import PDF**, **Import video**, **Import transcript**, and **Add link** controls.
-- Extracts searchable PDF text with physical page references, while keeping the original file locally. Scanned-only and password-protected PDFs are not supported yet.
-- Stores local video files with **Transcript needed** status. Saves video/interview/web links without claiming to have read or watched them.
-- Imports plain-text transcripts with their existing timestamps.
-- Preserves author, source date, page/timestamp, permission, and separate user notes; source details can be edited.
-- Exports complete ZIP backups containing original files, extracted text, notes, and research chat. JSON-only export excludes original files.
+- Adds **View full PDF · charts & layout** to imported PDF source details.
+- Opens the preserved original PDF inside TradeMe at the selected physical page, including its charts, diagrams, images, and layout.
+- Keeps searchable extracted text separate from the visual original. Existing imported PDFs need no re-import.
+- Checks original-file integrity before opening. The PDF window has no application bridge or Node access; sandboxing stays enabled, external network requests and new windows are blocked.
+- Adds a real desktop test that opens a two-page chart PDF, checks the selected page and preview security settings, and verifies rendered chart pixels. This runs in development and packaged Windows release checks.
 
-PDF limit: 25 MB / 1,500 pages. Video storage limit: 500 MB per file. Transcript limit: 500 KB. No AI training, automatic transcription, cloud document upload, account access, or trading is included.
+This improves viewing, not AI understanding. Chart interpretation, OCR, and an AI engine are not implemented yet. If you need to see charts before updating, use the existing **Open original file** button to open your system PDF reader.
 
-Back up your existing library before updating. Install through Settings if you have the updater-enabled Setup version. This release remains unsigned; the Windows upgrade cycle needs verification on your laptop.
+Export a backup before upgrading. This release is unsigned and the full Windows installer upgrade cycle still needs testing on the user's laptop.

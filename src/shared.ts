@@ -51,6 +51,7 @@ export interface DesktopAPI {
     kind: 'video-link' | 'interview-link' | 'web-link',
     metadata: SourceMetadata,
   ): Promise<Result<KnowledgeSource>>;
+  previewPdf(id: string, page: number): Promise<Result<void>>;
   openSource(id: string): Promise<Result<void>>;
   deleteSource(id: string): Promise<Result<void>>;
   updateStatus(): Promise<Result<UpdateState>>;

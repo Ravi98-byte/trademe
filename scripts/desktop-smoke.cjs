@@ -7,6 +7,7 @@ const { join, resolve } = require('node:path');
 const assert = require('node:assert/strict');
 const { makePdf } = require('../tests/fixtures/pdf.cjs');
 const { unzipSync } = require('fflate');
+const { PNG } = require('pngjs');
 (async () => {
   const dir = await mkdtemp(join(tmpdir(), 'trademe-desktop-'));
   let app;
@@ -165,6 +166,43 @@ const { unzipSync } = require('fflate');
     assert.ok(
       (await win.locator('.extracted-text').textContent()).includes('slippage'),
     );
+    const previewOpened = app.waitForEvent('window');
+    await win
+      .getByRole('button', {
+        name: 'View full PDF · charts & layout',
+        exact: true,
+      })
+      .click();
+    const preview = await previewOpened;
+    await preview.waitForLoadState('domcontentloaded');
+    assert.ok(preview.url().endsWith('#page=2'));
+    const preferences = await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .find((w) => w.webContents.getURL().endsWith('#page=2'))
+        .webContents.getLastWebPreferences(),
+    );
+    assert.equal(preferences.sandbox, true);
+    assert.equal(preferences.nodeIntegration, false);
+    let chartPixels = 0;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const image = PNG.sync.read(
+        await preview.screenshot({ path: join(dir, 'original-pdf.png') }),
+      );
+      chartPixels = 0;
+      for (let y = 100; y < image.height - 40; y++)
+        for (let x = Math.floor(image.width * 0.3); x < image.width; x++) {
+          const i = (y * image.width + x) * 4;
+          const [r, g, b] = image.data.subarray(i, i + 3);
+          if (r > 20 && r < 100 && g > 100 && g < 190 && b > 190) chartPixels++;
+        }
+      if (chartPixels > 10000) break;
+      await preview.waitForTimeout(500);
+    }
+    assert.ok(
+      chartPixels > 10000,
+      'Original PDF vector chart must be visibly rendered, not just extracted as text',
+    );
+    await preview.close();
     await win
       .getByRole('button', { name: 'Edit source details', exact: true })
       .click();
@@ -357,7 +395,7 @@ const { unzipSync } = require('fflate');
     );
     assert.deepEqual(errors, []);
     console.log(
-      'PASS: actual Electron create, search, edit, text import, export, restart persistence, delete, research question/reply, clipboard/chat backup, PDF pages/search, media/link import, original files and complete ZIP backup; no renderer errors.',
+      'PASS: actual Electron create, search, edit, text import, export, restart persistence, delete, research question/reply, clipboard/chat backup, PDF pages/search and original chart rendering, media/link import, original files and complete ZIP backup; no renderer errors.',
     );
     console.log('Isolated test artifacts:', dir);
   } finally {

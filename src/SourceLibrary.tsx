@@ -302,6 +302,27 @@ export function SourceLibrary({
                     </>
                   )}
                 </dl>
+                {current.kind === 'pdf' && (
+                  <>
+                    <button
+                      className="button primary"
+                      disabled={busy}
+                      onClick={() =>
+                        run(async () => {
+                          await unwrap(api!.previewPdf(current.id, page));
+                        })
+                      }
+                    >
+                      <BookOpen size={15} />
+                      View full PDF · charts & layout
+                    </button>
+                    <p className="chat-muted">
+                      The text below is a searchable extraction. Open the full
+                      PDF to see charts, diagrams, images, and the original
+                      layout. Visual content has not been interpreted by AI.
+                    </p>
+                  </>
+                )}
                 <button
                   className="button secondary"
                   disabled={busy}

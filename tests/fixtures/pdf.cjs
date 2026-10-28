@@ -13,7 +13,9 @@ exports.makePdf = function (
     const pageId = objects.length,
       streamId = pageId + 1;
     const escaped = text.replace(/([\\()])/g, '\\$1');
-    const stream = `BT /F1 12 Tf 50 700 Td (${escaped}) Tj ET`;
+    const chart =
+      '0.2 0.55 0.9 rg 50 450 65 100 re f 135 450 65 170 re f 220 450 65 130 re f 0 0 0 RG 1 w 40 440 m 310 440 l S';
+    const stream = `BT /F1 12 Tf 50 700 Td (${escaped}) Tj ET\n${chart}`;
     objects.push(
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${streamId} 0 R >>`,
       `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,

@@ -9,6 +9,7 @@ const api: DesktopAPI = {
     ipcRenderer.invoke('sources:save-file', token, input),
   saveSourceLink: (kind, input) =>
     ipcRenderer.invoke('sources:save-link', kind, input),
+  previewPdf: (id, page) => ipcRenderer.invoke('sources:preview-pdf', id, page),
   openSource: (id) => ipcRenderer.invoke('sources:open', id),
   deleteSource: (id) => ipcRenderer.invoke('sources:delete', id),
   updateStatus: () => ipcRenderer.invoke('updates:status'),
