@@ -21,6 +21,12 @@ jobs:
       - run: npm run build
       - run: node scripts/desktop-smoke.cjs
       - run: npm run dist -- --win --x64 --publish never
+      - name: Test packaged desktop imports
+        shell: pwsh
+        run: |
+          $env:SMOKE_EXECUTABLE = Join-Path $pwd 'release/win-unpacked/TradeMe.exe'
+          node scripts/desktop-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged desktop smoke test failed' }
       - uses: actions/upload-artifact@v4
         with:
           name: trademe-windows-unsigned

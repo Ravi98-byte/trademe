@@ -27,6 +27,12 @@ jobs:
       - run: node scripts/desktop-smoke.cjs
       - name: Build installer and update metadata
         run: npm run dist:win
+      - name: Test packaged desktop imports
+        shell: pwsh
+        run: |
+          $env:SMOKE_EXECUTABLE = Join-Path $pwd 'release/win-unpacked/TradeMe.exe'
+          node scripts/desktop-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged desktop smoke test failed' }
       - name: Validate required release files
         shell: pwsh
         run: |

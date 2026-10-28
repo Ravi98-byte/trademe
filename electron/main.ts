@@ -1,4 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, clipboard } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  clipboard,
+  shell,
+} from 'electron';
 import { readFile, stat, mkdir } from 'node:fs/promises';
 import { dirname, join, basename, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,6 +13,8 @@ import { LibraryStore } from './store.js';
 import type { Result } from '../src/shared.js';
 import updater from 'electron-updater';
 import { existsSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { prepareFile, type PreparedFile } from './source-files.js';
 import { UpdateController } from './updates.js';
 const here = dirname(fileURLToPath(import.meta.url));
 let window: BrowserWindow;
@@ -17,6 +26,7 @@ else {
   });
   app.whenReady().then(() => {
     const store = new LibraryStore(join(app.getPath('userData'), 'knowledge'));
+    const prepared = new Map<string, { file: PreparedFile; expires: number }>();
     const installedWindows =
       process.platform === 'win32' &&
       app.isPackaged &&
@@ -95,6 +105,92 @@ else {
       if (result.response !== 1) throw new Error('Deletion cancelled.');
       await store.deleteQuestion(id);
     });
+    handle('sources:edit', (id, input) => store.editSource(id, input));
+    handle('sources:list', () => store.listSources());
+    handle('sources:prepare', async (kind) => {
+      if (!['pdf', 'video-file', 'transcript'].includes(kind))
+        throw new Error('Unsupported import type.');
+      for (const [key, value] of prepared)
+        if (value.expires < Date.now()) prepared.delete(key);
+      if (prepared.size >= 5)
+        throw new Error('Finish or cancel your current imports first.');
+      const extensions =
+        kind === 'pdf'
+          ? ['pdf']
+          : kind === 'transcript'
+            ? ['txt', 'md', 'srt', 'vtt']
+            : ['mp4', 'm4v', 'mov', 'webm', 'mkv'];
+      const choice = await dialog.showOpenDialog(window, {
+        properties: ['openFile'],
+        filters: [
+          {
+            name:
+              kind === 'pdf'
+                ? 'PDF document'
+                : kind === 'transcript'
+                  ? 'Text transcript'
+                  : 'Video file',
+            extensions,
+          },
+        ],
+      });
+      if (choice.canceled) return null;
+      const file = await prepareFile(choice.filePaths[0], kind);
+      const token = randomUUID();
+      prepared.set(token, { file, expires: Date.now() + 20 * 60 * 1000 });
+      return {
+        token,
+        title: basename(file.originalName, extname(file.originalName)),
+        fileName: file.originalName,
+        kind: file.kind,
+        pageCount: file.pages?.length,
+        textPreview: (
+          file.pages?.find((p) => p.text)?.text ?? file.content
+        )?.slice(0, 700),
+      };
+    });
+    handle('sources:cancel', async (token) => {
+      prepared.delete(token);
+    });
+    handle('sources:save-file', async (token, input) => {
+      const draft = prepared.get(token);
+      if (!draft || draft.expires < Date.now()) {
+        prepared.delete(token);
+        throw new Error('File selection expired. Please choose it again.');
+      }
+      const source = await store.saveSourceFile(draft.file, input);
+      prepared.delete(token);
+      return source;
+    });
+    handle('sources:save-link', (kind, input) =>
+      store.saveSourceLink(kind, input),
+    );
+    handle('sources:open', async (id) => {
+      const source = (await store.listSources()).find((s) => s.id === id);
+      if (!source) throw new Error('Source not found.');
+      if (source.file) {
+        const error = await shell.openPath(await store.sourceFile(source.id));
+        if (error)
+          throw new Error(
+            'The original file could not be opened. Check that a PDF reader or video player is installed.',
+          );
+      } else if (source.url) {
+        await shell.openExternal(source.url);
+      }
+    });
+    handle('sources:delete', async (id) => {
+      const confirmation = await dialog.showMessageBox(window, {
+        type: 'question',
+        buttons: ['Cancel', 'Delete source'],
+        defaultId: 0,
+        cancelId: 0,
+        message: 'Delete this source record?',
+        detail:
+          'Original files are retained locally because earlier backups may reference them. Existing exported backups are unchanged.',
+      });
+      if (confirmation.response !== 1) throw new Error('Deletion cancelled.');
+      await store.deleteSource(id);
+    });
     handle('library:list', () => store.list());
     handle('library:save', (input, id) => {
       if (id !== undefined && typeof id !== 'string')
@@ -135,11 +231,18 @@ else {
     });
     handle('library:backup', async () => {
       const result = await dialog.showSaveDialog(window, {
-        defaultPath: `trademe-library-${new Date().toISOString().slice(0, 10)}.json`,
-        filters: [{ name: 'Library backup', extensions: ['json'] }],
+        defaultPath: `trademe-library-${new Date().toISOString().slice(0, 10)}.zip`,
+        filters: [
+          { name: 'Complete library backup', extensions: ['zip'] },
+          { name: 'Records only (no original files)', extensions: ['json'] },
+        ],
       });
       if (result.canceled || !result.filePath) return null;
-      await store.export(result.filePath);
+      if (extname(result.filePath).toLowerCase() === '.zip')
+        await store.exportArchive(result.filePath);
+      else if (extname(result.filePath).toLowerCase() === '.json')
+        await store.export(result.filePath);
+      else throw new Error('Choose a .zip or .json backup filename.');
       return result.filePath;
     });
     const createWindow = () => {

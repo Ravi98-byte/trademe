@@ -69,3 +69,15 @@ Windows x64 ZIP packaging completed successfully. ZIP CRC verification passed an
 The user confirmed the repository is public. This cloud session still receives Forbidden from GitHub's API and a 404 from its release page, so those requests cannot validate the release channel. Windows release creation, asset availability, and an actual installed-Windows upgrade cycle must be confirmed separately. No real updater download or installation is claimed from the fake-transport tests. Installer authenticity is not code-signed yet.
 
 Unpacked Linux packaging completed with the configured public GitHub provider. The generated `resources/app-update.yml` was inspected and points to the intended owner/repository and stable release channel with no credentials. This validates packaging configuration, not Windows installation.
+
+## Version 0.4.0 source imports
+
+- 34 storage, source-import, and updater tests passed, none skipped. Real generated two-page PDFs were parsed, preserving physical page references. Tests cover scanned/no-text and corrupt PDFs, links and rejected URL schemes, transcript timestamps, local video byte storage, changing/tampered originals, safe asset names, metadata edits, compatibility, and complete ZIP backup/restore.
+- The expanded real Electron workflow passed in development and in the packaged Linux application. It imports a generated PDF, searches a passage on page 2, edits metadata, stores a video fixture and transcript, saves an interview link, rejects an invalid selection token, exports ZIP with originals, restarts, and verifies saved source content. Existing notes/chat checks passed and no renderer errors were observed.
+- A packaged run also passed with Playwright's Chromium sandbox explicitly enabled. Playwright defaults otherwise; previous notes saying no sandbox bypass was used did not account for that launcher default. The test launcher now explicitly enables it; the application's production BrowserWindow sandbox remains enabled.
+- The initial Electron worker-thread PDF integration crashed during development. Moving extraction to an isolated utility process and explicitly configuring local PDF.js worker/font/CMap resources resolved the desktop failure; the passing packaged test covers that corrected path.
+- Strict production build passed; dependency audit reported no known vulnerabilities after the new dependencies.
+- Windows CI/release jobs now test the packaged executable's import workflow before providing artifacts/publishing. Their result and the Windows upgrade cycle are not verified by the Linux checks.
+- Actual video playback/codec support, transcription, OCR, semantic retrieval, and AI analysis are not implemented or tested. A video fixture proves file storage only. Native file-dialog choices are stubbed in automated tests; actual IPC, parsing, original-file copying, ZIP writing, and persistence are exercised.
+
+The now-public releases page subsequently returned HTTP 200 from this environment. That establishes page access at the time of the check, not successful installation or availability of the pending 0.4.0 release.

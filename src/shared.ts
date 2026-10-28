@@ -30,9 +30,29 @@ export type Library = {
   version: 1;
   entries: Entry[];
   questions?: ResearchQuestion[];
+  sources?: KnowledgeSource[];
 };
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface DesktopAPI {
+  editSource(
+    id: string,
+    metadata: SourceMetadata,
+  ): Promise<Result<KnowledgeSource>>;
+  listSources(): Promise<Result<KnowledgeSource[]>>;
+  prepareSource(
+    kind: 'pdf' | 'transcript' | 'video-file',
+  ): Promise<Result<PreparedSource | null>>;
+  cancelSource(token: string): Promise<Result<void>>;
+  saveSourceFile(
+    token: string,
+    metadata: SourceMetadata,
+  ): Promise<Result<KnowledgeSource>>;
+  saveSourceLink(
+    kind: 'video-link' | 'interview-link' | 'web-link',
+    metadata: SourceMetadata,
+  ): Promise<Result<KnowledgeSource>>;
+  openSource(id: string): Promise<Result<void>>;
+  deleteSource(id: string): Promise<Result<void>>;
   updateStatus(): Promise<Result<UpdateState>>;
   checkForUpdates(): Promise<Result<UpdateState>>;
   downloadUpdate(): Promise<Result<UpdateState>>;
@@ -83,4 +103,44 @@ export type UpdateState = {
   version?: string;
   progress?: number;
   message: string;
+};
+
+export type SourceKind =
+  | 'pdf'
+  | 'transcript'
+  | 'video-file'
+  | 'video-link'
+  | 'interview-link'
+  | 'web-link';
+export type SourceMetadata = {
+  sourceDate?: string;
+  locator?: string;
+  title: string;
+  author: string;
+  url: string;
+  permission: string;
+  notes: string;
+};
+export type SourceAsset = {
+  name: string;
+  originalName: string;
+  sha256: string;
+  size: number;
+};
+export type SourcePage = { number: number; text: string };
+export type KnowledgeSource = SourceMetadata & {
+  id: string;
+  kind: SourceKind;
+  createdAt: string;
+  file?: SourceAsset;
+  pages?: SourcePage[];
+  content?: string;
+};
+export type PreparedSource = {
+  token: string;
+  title: string;
+  fileName: string;
+  kind: 'pdf' | 'transcript' | 'video-file';
+  pageCount?: number;
+  textPreview?: string;
 };

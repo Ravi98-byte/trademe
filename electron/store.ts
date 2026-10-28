@@ -8,6 +8,13 @@ import {
   unlink,
 } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createReadStream, createWriteStream, constants } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
+import { Transform, Readable } from 'node:stream';
+import { createHash } from 'node:crypto';
+import yazl from 'yazl';
+import { sourceMetadata, validateSources } from './source-validation.js';
+import { digestFile, type PreparedFile } from './source-files.js';
 import { randomUUID } from 'node:crypto';
 import {
   categories,
@@ -16,6 +23,7 @@ import {
   type EntryInput,
   type Library,
   type ResearchQuestion,
+  type KnowledgeSource,
 } from '../src/shared.js';
 
 export function validateInput(value: unknown): EntryInput {
@@ -86,6 +94,7 @@ export class LibraryStore {
       data = JSON.parse(raw);
       if (data.version !== 1 || !Array.isArray(data.entries)) throw new Error();
       validateQuestions(data.questions);
+      validateSources(data.sources);
       const ids = new Set<string>();
       for (const entry of data.entries) {
         validateInput(entry);
@@ -216,6 +225,168 @@ export class LibraryStore {
         throw new Error('Question not found.');
       data.questions = data.questions.filter((q) => q.id !== id);
       await this.write(data);
+    });
+  }
+  listSources(): Promise<KnowledgeSource[]> {
+    return this.serial(async () => (await this.read()).sources ?? []);
+  }
+  saveSourceLink(kind: unknown, raw: unknown): Promise<KnowledgeSource> {
+    return this.serial(async () => {
+      if (
+        !['video-link', 'interview-link', 'web-link'].includes(kind as string)
+      )
+        throw new Error('Choose a supported link type.');
+      const input = sourceMetadata(raw, true);
+      const data = await this.read();
+      const source: KnowledgeSource = {
+        ...input,
+        kind: kind as KnowledgeSource['kind'],
+        id: randomUUID(),
+        createdAt: new Date().toISOString(),
+      };
+      data.sources = [source, ...(data.sources ?? [])];
+      validateSources(data.sources);
+      await this.write(data);
+      return source;
+    });
+  }
+  saveSourceFile(
+    prepared: PreparedFile,
+    raw: unknown,
+  ): Promise<KnowledgeSource> {
+    return this.serial(async () => {
+      const input = sourceMetadata(raw, false);
+      const data = await this.read();
+      const source: KnowledgeSource = {
+        ...input,
+        id: randomUUID(),
+        kind: prepared.kind,
+        createdAt: new Date().toISOString(),
+        file: {
+          name: `${prepared.sha256}.${prepared.extension}`,
+          originalName: prepared.originalName,
+          sha256: prepared.sha256,
+          size: prepared.size,
+        },
+        ...(prepared.pages ? { pages: prepared.pages } : {}),
+        ...(prepared.content ? { content: prepared.content } : {}),
+      };
+      validateSources([source]);
+      const assets = join(this.directory, 'assets');
+      await mkdir(assets, { recursive: true, mode: 0o700 });
+      const temporary = join(assets, `${randomUUID()}.tmp`);
+      const destination = join(assets, source.file!.name);
+      try {
+        const hash = createHash('sha256');
+        let size = 0;
+        const guard = new Transform({
+          transform(chunk, _encoding, callback) {
+            size += chunk.length;
+            if (size > prepared.size) {
+              callback(
+                new Error('The original file changed. Choose it again.'),
+              );
+              return;
+            }
+            hash.update(chunk);
+            callback(null, chunk);
+          },
+        });
+        await pipeline(
+          createReadStream(prepared.path),
+          guard,
+          createWriteStream(temporary, { flags: 'wx', mode: 0o600 }),
+        );
+        if (size !== prepared.size || hash.digest('hex') !== prepared.sha256)
+          throw new Error('The original file changed. Choose it again.');
+        try {
+          await copyFile(temporary, destination, constants.COPYFILE_EXCL);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+          if ((await digestFile(destination)) !== prepared.sha256)
+            throw new Error(
+              'An existing original file has changed. Restore it before importing a duplicate.',
+            );
+        }
+        data.sources = [source, ...(data.sources ?? [])];
+        await this.write(data);
+        return source;
+      } finally {
+        await unlink(temporary).catch(() => undefined);
+      }
+    });
+  }
+  editSource(id: unknown, raw: unknown): Promise<KnowledgeSource> {
+    return this.serial(async () => {
+      const data = await this.read();
+      const source = data.sources?.find((s) => s.id === id);
+      if (!source) throw new Error('Source not found.');
+      const input = sourceMetadata(raw, source.kind.endsWith('-link'));
+      Object.assign(source, input);
+      validateSources(data.sources);
+      await this.write(data);
+      return source;
+    });
+  }
+  deleteSource(id: unknown): Promise<void> {
+    return this.serial(async () => {
+      const data = await this.read();
+      if (!data.sources?.some((s) => s.id === id))
+        throw new Error('Source not found.');
+      data.sources = data.sources.filter((s) => s.id !== id);
+      await this.write(data);
+    });
+  }
+  async sourceFile(id: string): Promise<string> {
+    const source = (await this.listSources()).find((s) => s.id === id);
+    if (!source?.file) throw new Error('Original file not found.');
+    const path = join(this.directory, 'assets', source.file.name);
+    if ((await digestFile(path)) !== source.file.sha256)
+      throw new Error(
+        'Original file is missing or changed. Restore it from a complete backup.',
+      );
+    return path;
+  }
+  exportArchive(destination: string): Promise<void> {
+    return this.serial(async () => {
+      const data = await this.read();
+      const temporary = `${destination}.${randomUUID()}.tmp`;
+      const zip = new yazl.ZipFile();
+      try {
+        const assets = new Map(
+          (data.sources ?? [])
+            .filter((s) => s.file)
+            .map((s) => [s.file!.name, s.file!]),
+        );
+        for (const [name, file] of assets) {
+          const path = join(this.directory, 'assets', name);
+          if ((await digestFile(path)) !== file.sha256)
+            throw new Error(
+              'An original file is missing or changed. Backup stopped.',
+            );
+        }
+        zip.addBuffer(
+          Buffer.from(JSON.stringify(data, null, 2)),
+          'library.json',
+        );
+        for (const [name] of assets)
+          zip.addFile(join(this.directory, 'assets', name), `assets/${name}`, {
+            compress: false,
+          });
+        const output = createWriteStream(temporary, {
+          flags: 'wx',
+          mode: 0o600,
+        });
+        const done = pipeline(zip.outputStream, output);
+        zip.on('error', (error) =>
+          (zip.outputStream as Readable).destroy(error),
+        );
+        zip.end();
+        await done;
+        await rename(temporary, destination);
+      } finally {
+        await unlink(temporary).catch(() => undefined);
+      }
     });
   }
   export(destination: string): Promise<void> {

@@ -12,15 +12,15 @@ The first knowledge store uses a versioned JSON file. This is suitable for a sma
 
 ## Module boundaries
 
-| Module               | Current state                   | Future responsibility                                                                |
-| -------------------- | ------------------------------- | ------------------------------------------------------------------------------------ |
-| Desktop interface    | Implemented                     | Accessible workspace, permission prompts, honest connection status                   |
-| Knowledge library    | Notes and text/Markdown imports | PDF extraction with page references, retrieval, cited answers                        |
-| Market data          | Not implemented                 | Licensed provider adapter, entitlement/freshness metadata                            |
-| Strategy research    | Not implemented                 | Reproducible datasets, costs, explicit rules, held-out evaluation                    |
-| Account/risk         | Not implemented                 | Read-only verified state, exact firm/account rules, independent limits               |
-| Execution            | Absent                          | Paper adapter first; separately authorized real execution only after controls        |
-| Computer observation | Not implemented                 | Supported integration first; uncertainty detection, explicit permissions, audit logs |
+| Module               | Current state                                         | Future responsibility                                                                |
+| -------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Desktop interface    | Implemented                                           | Accessible workspace, permission prompts, honest connection status                   |
+| Knowledge library    | Notes, PDFs, source links, video storage, transcripts | AI retrieval and cited answers                                                       |
+| Market data          | Not implemented                                       | Licensed provider adapter, entitlement/freshness metadata                            |
+| Strategy research    | Not implemented                                       | Reproducible datasets, costs, explicit rules, held-out evaluation                    |
+| Account/risk         | Not implemented                                       | Read-only verified state, exact firm/account rules, independent limits               |
+| Execution            | Absent                                                | Paper adapter first; separately authorized real execution only after controls        |
+| Computer observation | Not implemented                                       | Supported integration first; uncertainty detection, explicit permissions, audit logs |
 
 Provider access will sit behind separate interfaces when real requirements are known. No unused provider SDKs, credentials, fake integration stubs, or execution routes are installed now. Future modules should consume validated source records rather than infer that a note or an AI answer authorizes an action.
 
@@ -52,8 +52,14 @@ Confirmed: Windows 10, Intel Core i5 7th generation (x64 target); notes, text fi
 
 The user wants the future agent to ask for help inside the application when information is missing. The user can research in ChatGPT and paste an answer into the matching thread. Version 0.2.0 implements the local manual handoff: narrow IPC methods, validated immutable replies, source references, timestamps, pending-reply counts, clipboard copying by explicit click, and backups shared with the library. It does not invent AI questions or execute anything. `origin: manual` makes that boundary explicit. Answered means a reply was recorded, not that the claim was verified or an action approved. An eventual agent must evaluate freshness and evidence and separately enforce permissions/risk checks; no consumer of chat replies is implemented now.
 
-The accepted next milestone remains document import and source-based search. The chat was added first at the user's request; PDF extraction and recovery UI have not been delivered yet.
+The accepted next milestone remains document import and source-based search. The chat was added first at the user's request; Version 0.4.0 subsequently delivers PDF extraction, page search, source records, local video storage, transcripts, and full ZIP backup export. A recovery UI remains pending.
 
 ## Update lifecycle
 
 Version 0.3.0 adds a narrow update controller and Settings UI over electron-updater. Its provider is fixed in packaged configuration. The renderer can request status/check/download/install but cannot supply URLs or executable paths. NSIS-installed Windows builds check once after startup; downloads and restarts are explicit. The saved library is exported before restart. The tag-triggered Windows workflow tests and builds before publishing stable releases. ZIP/dev builds do not enable installation. Real Windows upgrade testing and publisher code signing remain outstanding; future trading integration must also gate restarts on a stopped agent.
+
+## Source import architecture — version 0.4.0
+
+The library file now optionally contains `sources`; note-only libraries are preserved. Each source separates extracted content from user annotations and rights metadata. Local originals are hash-addressed in `knowledge/assets`; the renderer only receives a short-lived selection token and metadata, not a freely usable filesystem path. Saving requires matching the selected hash and size. Backups/current source references are validated before writing. Complete ZIP exports stream files and use generated safe archive names. Deleted sources leave their originals in place for earlier local backups; no automatic garbage collector is implemented yet.
+
+PDF extraction uses PDF.js in an Electron utility process, limited to 45 seconds. Node-only tests use a worker thread, but the real desktop/packaged test exercises the utility process. The two runtimes differ: a worker-thread PDF attempt crashed Electron during development, so it was replaced by the isolated utility process before release. PDF resources are read from the installed PDF.js package using a restricted local binary factory; sources do not initiate browser or network activity. Raw video storage is not video interpretation. No content creates trading authority or automatically trains a model.

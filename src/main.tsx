@@ -31,6 +31,7 @@ import {
   type UpdateState,
 } from './shared';
 import './styles.css';
+import { SourceLibrary } from './SourceLibrary';
 import { UpdatesPanel } from './UpdatesPanel';
 import { ResearchChat } from './ResearchChat';
 declare global {
@@ -75,6 +76,8 @@ const modules = [
 function App() {
   const [page, setPage] = useState('Knowledge library');
   const [update, setUpdate] = useState<UpdateState>();
+  const [libraryView, setLibraryView] = useState<'notes' | 'sources'>('notes');
+  const [sourceCount, setSourceCount] = useState(0);
   const [waiting, setWaiting] = useState(0);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [query, setQuery] = useState('');
@@ -149,6 +152,9 @@ function App() {
     if (!result.ok) throw new Error(result.error);
     return result.value;
   }
+  async function refreshSourceCount() {
+    if (api) setSourceCount((await unwrap(api.listSources())).length);
+  }
   async function refreshQuestions() {
     if (api)
       setWaiting(
@@ -168,6 +174,7 @@ function App() {
     Promise.all([
       refresh(),
       refreshQuestions(),
+      refreshSourceCount(),
       unwrap(api.storageInfo()).then(setStorage),
     ])
       .catch((e) => setError(e.message))
@@ -186,6 +193,7 @@ function App() {
     }
   }
   function newNote() {
+    setLibraryView('notes');
     setEditing(undefined);
     setForm({ ...blank });
     setError('');
@@ -231,7 +239,8 @@ function App() {
             onClick={() => setPage('Knowledge library')}
           >
             <BookOpen size={18} />
-            Knowledge library<span className="nav-count">{entries.length}</span>
+            Knowledge library
+            <span className="nav-count">{entries.length + sourceCount}</span>
           </button>
           <button
             className={page === 'Research chat' ? 'nav active' : 'nav'}
@@ -361,12 +370,24 @@ function App() {
             {page === 'Knowledge library' && (
               <div className="heading-actions">
                 <button
+                  className="button primary"
+                  disabled={!api}
+                  onClick={() => {
+                    setNotice('');
+                    setError('');
+                    setLibraryView('sources');
+                  }}
+                >
+                  PDFs, videos & links
+                </button>
+                <button
                   disabled={!api || busy || loading}
                   className="button secondary"
                   onClick={() =>
                     run(async () => {
                       const imported = await unwrap(api!.importText());
                       if (imported) {
+                        setLibraryView('notes');
                         setEditing(undefined);
                         setForm({ ...blank, ...imported });
                       }
@@ -387,7 +408,44 @@ function App() {
               </div>
             )}
           </div>
-          {(page === 'Knowledge library' || page === 'Overview') && (
+          {page === 'Knowledge library' && (
+            <div
+              className="library-mode-tabs"
+              role="group"
+              aria-label="Library view"
+            >
+              <button
+                className={libraryView === 'notes' ? 'selected' : ''}
+                onClick={() => {
+                  setNotice('');
+                  setError('');
+                  setLibraryView('notes');
+                }}
+              >
+                Notes ({entries.length})
+              </button>
+              <button
+                className={libraryView === 'sources' ? 'selected' : ''}
+                onClick={() => {
+                  setNotice('');
+                  setError('');
+                  setLibraryView('sources');
+                }}
+              >
+                Documents & media ({sourceCount})
+              </button>
+            </div>
+          )}
+          {page === 'Knowledge library' && libraryView === 'sources' && (
+            <SourceLibrary
+              api={api}
+              onChanged={() => {
+                void refreshSourceCount().catch((e) => setError(e.message));
+              }}
+            />
+          )}
+          {((page === 'Knowledge library' && libraryView === 'notes') ||
+            page === 'Overview') && (
             <div className="stats">
               <Stat
                 label="LIBRARY NOTES"
@@ -421,7 +479,7 @@ function App() {
               />
             </div>
           )}
-          {page === 'Knowledge library' && (
+          {page === 'Knowledge library' && libraryView === 'notes' && (
             <>
               <div className="library-toolbar">
                 <div className="tabs">
@@ -745,10 +803,12 @@ function App() {
               </button>
               <h3>Restore carefully</h3>
               <p>
-                Close TradeMe, keep a copy of the current library.json, then
-                replace it with a verified exported backup. Reopen the app and
-                check your notes. This first version does not include an in-app
-                restore wizard.
+                Close TradeMe and keep a safe copy of the entire knowledge
+                folder. For a complete ZIP backup, extract library.json and the
+                assets folder into that knowledge folder. JSON-only backups
+                restore records and extracted text but do not include original
+                files. Reopen and check your sources. An in-app restore wizard
+                is not implemented yet.
               </p>
               <h3>Trading & external services</h3>
               <p>
