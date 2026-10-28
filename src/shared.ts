@@ -33,6 +33,10 @@ export type Library = {
 };
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface DesktopAPI {
+  updateStatus(): Promise<Result<UpdateState>>;
+  checkForUpdates(): Promise<Result<UpdateState>>;
+  downloadUpdate(): Promise<Result<UpdateState>>;
+  installUpdate(): Promise<Result<UpdateState>>;
   listQuestions(): Promise<Result<ResearchQuestion[]>>;
   createQuestion(input: QuestionInput): Promise<Result<ResearchQuestion>>;
   replyToQuestion(
@@ -62,4 +66,21 @@ export type ResearchQuestion = QuestionInput & {
   origin: 'manual';
   createdAt: string;
   replies: QuestionReply[];
+};
+
+export type UpdateState = {
+  phase:
+    | 'unsupported'
+    | 'idle'
+    | 'checking'
+    | 'available'
+    | 'current'
+    | 'downloading'
+    | 'ready'
+    | 'installing'
+    | 'error';
+  currentVersion: string;
+  version?: string;
+  progress?: number;
+  message: string;
 };

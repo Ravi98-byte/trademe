@@ -1,0 +1,51 @@
+name: Publish Windows update
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Verify tag matches app version
+        run: node -e "const p=require('./package.json');if(process.env.GITHUB_REF_NAME !== 'v'+p.version)process.exit(1)"
+      - run: npm ci
+      - run: npm run setup:runtime
+      - run: npm test
+      - run: npm run build
+      - run: node scripts/desktop-smoke.cjs
+      - name: Build installer and update metadata
+        run: npm run dist:win
+      - name: Validate required release files
+        shell: pwsh
+        run: |
+          if (!(Test-Path release/latest.yml)) { throw 'Missing update metadata' }
+          if (!(Get-ChildItem release/*.exe)) { throw 'Missing installer' }
+          if (!(Get-ChildItem release/*.blockmap)) { throw 'Missing differential download metadata' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trademe-windows-${{ github.ref_name }}
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+          if-no-files-found: error
+      - name: Publish stable release after checks
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $assets = @(Get-ChildItem release -File | Where-Object { $_.Extension -in '.exe', '.blockmap' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
+          gh release create $env:GITHUB_REF_NAME @assets --verify-tag --title "TradeMe $env:GITHUB_REF_NAME" --notes-file docs/release-notes.md --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

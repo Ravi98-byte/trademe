@@ -183,6 +183,32 @@ const assert = require('node:assert/strict');
       path: join(dir, 'research-chat.png'),
       fullPage: true,
     });
+    await win
+      .getByRole('button', { name: 'Settings & storage', exact: true })
+      .click();
+    await win
+      .getByRole('heading', { name: 'App updates', exact: true })
+      .waitFor();
+    await win
+      .getByText(
+        'Updates are available in the installed Windows application.',
+        { exact: true },
+      )
+      .waitFor();
+    assert.equal(
+      await win
+        .getByRole('button', { name: 'Check for updates', exact: true })
+        .isDisabled(),
+      true,
+    );
+    const unsupported = await win.evaluate(() =>
+      window.trademe.installUpdate(),
+    );
+    assert.equal(unsupported.value.phase, 'unsupported');
+    assert.equal(
+      unsupported.value.currentVersion,
+      require('../package.json').version,
+    );
     assert.deepEqual(errors, []);
     console.log(
       'PASS: actual Electron create, search, edit, text import, export, restart persistence, delete, research question/reply, clipboard and chat backup; no renderer errors.',

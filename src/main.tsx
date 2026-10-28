@@ -28,8 +28,10 @@ import {
   type Entry,
   type EntryInput,
   type Result,
+  type UpdateState,
 } from './shared';
 import './styles.css';
+import { UpdatesPanel } from './UpdatesPanel';
 import { ResearchChat } from './ResearchChat';
 declare global {
   interface Window {
@@ -72,6 +74,7 @@ const modules = [
 ];
 function App() {
   const [page, setPage] = useState('Knowledge library');
+  const [update, setUpdate] = useState<UpdateState>();
   const [waiting, setWaiting] = useState(0);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [query, setQuery] = useState('');
@@ -121,6 +124,26 @@ function App() {
     };
   }, [modalOpen, busy]);
   const api = window.trademe;
+  useEffect(() => {
+    if (!api) return;
+    let disposed = false;
+    const poll = async () => {
+      try {
+        const r = await api.updateStatus();
+        if (!disposed && r.ok) setUpdate(r.value);
+      } catch {
+        /* Settings shows update request errors. */
+      }
+    };
+    void poll();
+    const timer = setInterval(() => {
+      void poll();
+    }, 5000);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
+  }, [api]);
   async function unwrap<T>(promise: Promise<Result<T>>): Promise<T> {
     const result = await promise;
     if (!result.ok) throw new Error(result.error);
@@ -261,7 +284,9 @@ function App() {
             <div>
               Ravi’s workspace<small>Local · Private by default</small>
             </div>
-            <span className="version">v0.2</span>
+            <span className="version">
+              {update ? `v${update.currentVersion}` : 'dev'}
+            </span>
           </div>
         </div>
       </aside>
@@ -280,6 +305,25 @@ function App() {
           </div>
         </header>
         <main>
+          {update &&
+            ['available', 'downloading', 'ready'].includes(update.phase) &&
+            page !== 'Settings' && (
+              <div className="alert success" role="status">
+                <span>
+                  {update.phase === 'ready'
+                    ? `Update ${update.version} is ready to install.`
+                    : update.phase === 'downloading'
+                      ? 'An app update is downloading.'
+                      : `Update ${update.version} is available.`}
+                </span>
+                <button
+                  className="button secondary"
+                  onClick={() => setPage('Settings')}
+                >
+                  View update
+                </button>
+              </div>
+            )}
           {!api && (
             <div className="alert">
               Browser preview only. Open the Electron desktop app to save notes,
@@ -674,6 +718,7 @@ function App() {
           )}
           {page === 'Settings' && (
             <section className="settings-panel">
+              <UpdatesPanel api={api} />
               <h2>
                 <FolderOpen size={20} /> Local storage & recovery
               </h2>
@@ -724,7 +769,10 @@ function App() {
             <span className="divider" /> No live market data
           </span>
           <span>
-            FOUNDATION RELEASE <span className="version">0.2.0</span>
+            FOUNDATION RELEASE{' '}
+            <span className="version">
+              {update?.currentVersion ?? 'Development'}
+            </span>
           </span>
         </div>
       </div>

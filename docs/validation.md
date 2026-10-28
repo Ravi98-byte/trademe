@@ -61,3 +61,11 @@ Windows x64 ZIP packaging completed successfully. ZIP CRC verification passed an
 - No renderer errors were observed during the tested workflow.
 - The user supplied Windows screenshots and confirmed note persistence after restart for version 0.1.0. Version 0.2.0 still needs Windows validation. Installer execution has not been independently verified.
 - Automatic AI questions, external AI calls, PDF import, and any action resumption are not implemented or tested.
+
+## Version 0.3.0 updater
+
+23 storage and updater-controller tests passed, none skipped. The new controller tests use a fake updater and cover user gating, failed downloads, duplicate requests, error sanitisation, backup failure, progress bounds, and backup-before-install ordering. The real Electron smoke test passed with the new Settings panel and disabled update controls in development; it verifies the running package version and that unsupported installs cannot restart. Existing library/chat checks also passed. TypeScript/production build passed; npm audit reported no known vulnerabilities after adding electron-updater.
+
+The user confirmed the repository is public. This cloud session still receives Forbidden from GitHub's API and a 404 from its release page, so those requests cannot validate the release channel. Windows release creation, asset availability, and an actual installed-Windows upgrade cycle must be confirmed separately. No real updater download or installation is claimed from the fake-transport tests. Installer authenticity is not code-signed yet.
+
+Unpacked Linux packaging completed with the configured public GitHub provider. The generated `resources/app-update.yml` was inspected and points to the intended owner/repository and stable release channel with no credentials. This validates packaging configuration, not Windows installation.

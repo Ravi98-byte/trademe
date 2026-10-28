@@ -1,6 +1,7 @@
 name: Desktop checks
 on:
   push:
+    branches: ['**']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -23,4 +24,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: trademe-windows-unsigned
-          path: release/*.exe
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+          if-no-files-found: error

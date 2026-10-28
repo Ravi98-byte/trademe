@@ -14,6 +14,16 @@ A local-first desktop research workspace for Ravi's Nasdaq futures trading proje
 
 PDF extraction, semantic search, AI answers, market feeds, backtesting, platform observation, risk enforcement, and trading are **future work**. A source reference is a metadata citation, not proof that a claim is correct. A user-recorded test result has not been independently verified.
 
+## Built-in Windows updates — version 0.3.0
+
+Install the NSIS **Setup** executable once to enable updates (an extracted ZIP or development checkout is not an installed app). Open **Settings & storage → App updates**. Installed Windows builds check public GitHub Releases about 15 seconds after launch; an available-update banner links to Settings. You choose **Download**, then **Restart to install**, with a final confirmation. Closing the app normally does not automatically install an update.
+
+Before restarting, a complete saved library (including chat) is exported into `pre-update-backups` under the app's user-data directory. A failed backup prevents installation. Save unsent drafts first. Updates keep the same app ID, package name, and local data location. Export an off-device backup before the first upgrade as well. Pre-update snapshots are retained separately from the rotating 20 library backups; manage those copies carefully.
+
+Updates come from stable releases of the public `Ravi98-byte/trademe` repository. The app sends update/version requests to GitHub; no notes or chats are included in those requests and no GitHub token is embedded. electron-updater handles TLS downloads, metadata SHA-512 checks, version comparison, and installer handoff. Signature verification has not been disabled, but no signing certificate/publisher identity is configured yet, so these unsigned builds have no independent publisher-signature guarantee. Windows may show an unsigned-app warning. Do not describe this first release as code-signed or a fully Windows-validated updater.
+
+The first bootstrap release has to be installed manually. The complete installed-Windows download/restart/upgrade cycle remains to be tested with two published versions. See [release process](docs/updates.md).
+
 ## Research chat — version 0.2.0
 
 Open **Research chat** to keep a question and its researched replies in the same thread. Until an AI engine is connected, use **Create manual test question**, enter the missing information and why it is needed, then choose **Copy question for ChatGPT**. Paste it into ChatGPT yourself, research the answer, and return to **Your reply** in TradeMe. Add a source/reference when possible and click **Save reply**. Replies are labelled user-provided and unverified. They do not grant trading authority or trigger actions. There is no automatic AI generation, browser research, ChatGPT connection, or follow-up in this release.
@@ -50,7 +60,7 @@ The installer appears in `release/`. The installer bundles the Electron runtime;
 
 ## Windows development ZIP
 
-The Linux cross-build can produce `release/TradeMe-0.2.0-win.zip` without the Wine-dependent NSIS installer step:
+The Linux cross-build can produce `release/TradeMe-0.3.0-win.zip` without the Wine-dependent NSIS installer step:
 
 ```sh
 npm run dist -- --win zip --x64 --publish never -c.win.signAndEditExecutable=false

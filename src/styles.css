@@ -1189,3 +1189,26 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+.updates-panel {
+  border-bottom: 1px solid #34405a;
+  padding-bottom: 28px;
+  margin-bottom: 28px;
+}
+.updates-panel .form-hint {
+  margin-top: 18px;
+  max-width: 800px;
+}
+.update-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  font-size: 11px;
+  color: #a7baf2;
+}
+.update-progress progress {
+  width: 280px;
+  max-width: 80%;
+  accent-color: #b7c4ff;
+}

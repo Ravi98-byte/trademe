@@ -1,9 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain, clipboard } from 'electron';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, mkdir } from 'node:fs/promises';
 import { dirname, join, basename, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LibraryStore } from './store.js';
 import type { Result } from '../src/shared.js';
+import updater from 'electron-updater';
+import { existsSync } from 'node:fs';
+import { UpdateController } from './updates.js';
 const here = dirname(fileURLToPath(import.meta.url));
 let window: BrowserWindow;
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -14,6 +17,25 @@ else {
   });
   app.whenReady().then(() => {
     const store = new LibraryStore(join(app.getPath('userData'), 'knowledge'));
+    const installedWindows =
+      process.platform === 'win32' &&
+      app.isPackaged &&
+      existsSync(join(dirname(process.execPath), 'Uninstall TradeMe.exe'));
+    const { autoUpdater } = updater;
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = false;
+    autoUpdater.allowPrerelease = false;
+    autoUpdater.allowDowngrade = false;
+    autoUpdater.logger = null;
+    const updates = new UpdateController(
+      installedWindows ? autoUpdater : null,
+      app.getVersion(),
+      async () => {
+        const directory = join(app.getPath('userData'), 'pre-update-backups');
+        await mkdir(directory, { recursive: true, mode: 0o700 });
+        await store.export(join(directory, `library-${Date.now()}.json`));
+      },
+    );
     function handle<T>(name: string, action: (...args: any[]) => Promise<T>) {
       ipcMain.handle(name, async (event, ...args): Promise<Result<T>> => {
         if (
@@ -31,6 +53,23 @@ else {
         }
       });
     }
+    handle('updates:status', async () => updates.status());
+    handle('updates:check', () => updates.check());
+    handle('updates:download', () => updates.download());
+    handle('updates:install', async () => {
+      if (updates.status().phase !== 'ready') return updates.status();
+      const confirmation = await dialog.showMessageBox(window, {
+        type: 'question',
+        buttons: ['Cancel', 'Back up and restart'],
+        defaultId: 0,
+        cancelId: 0,
+        message: 'Install the downloaded update?',
+        detail:
+          'Save any unsent notes and chat drafts first. TradeMe will back up your saved library, close, run the installer, and reopen. No trading connection exists in this release.',
+      });
+      if (confirmation.response !== 1) return updates.status();
+      return updates.install();
+    });
     handle('questions:list', () => store.listQuestions());
     handle('questions:create', (input) => store.createQuestion(input));
     handle('questions:reply', (id, content, source) =>
@@ -126,6 +165,12 @@ else {
       else void window.loadFile(join(here, '../../dist/index.html'));
     };
     createWindow();
+    if (installedWindows) {
+      const timer = setTimeout(() => {
+        void updates.check();
+      }, 15000);
+      timer.unref();
+    }
     app.on('activate', () => {
       if (!BrowserWindow.getAllWindows().length) createWindow();
     });

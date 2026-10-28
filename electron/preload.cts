@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopAPI } from '../src/shared.js';
 const api: DesktopAPI = {
+  updateStatus: () => ipcRenderer.invoke('updates:status'),
+  checkForUpdates: () => ipcRenderer.invoke('updates:check'),
+  downloadUpdate: () => ipcRenderer.invoke('updates:download'),
+  installUpdate: () => ipcRenderer.invoke('updates:install'),
   listQuestions: () => ipcRenderer.invoke('questions:list'),
   createQuestion: (input) => ipcRenderer.invoke('questions:create', input),
   replyToQuestion: (id, content, source) =>
